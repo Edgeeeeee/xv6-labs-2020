@@ -5,7 +5,7 @@
 #include "kernel/fcntl.h"
 
 // Parsed command representation
-#define EXEC  1
+#define EXEC  1 
 #define REDIR 2
 #define PIPE  3
 #define LIST  4

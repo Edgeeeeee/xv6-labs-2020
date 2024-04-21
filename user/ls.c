@@ -6,7 +6,7 @@
 char*
 fmtname(char *path)
 {
-  static char buf[DIRSIZ+1];
+  static char buf[DIRSIZ+1];  // DIRSIZ = 14
   char *p;
 
   // Find first character after last slash.
@@ -28,6 +28,11 @@ ls(char *path)
   char buf[512], *p;
   int fd;
   struct dirent de;
+
+  //   struct dirent {
+  //     ushort inum;  // id
+  //     char name[DIRSIZ];  // 名字
+  //   };
   struct stat st;
 
   if((fd = open(path, 0)) < 0){
@@ -51,13 +56,13 @@ ls(char *path)
       printf("ls: path too long\n");
       break;
     }
-    strcpy(buf, path);
+    strcpy(buf, path);  // path 复制到 buf
     p = buf+strlen(buf);
     *p++ = '/';
-    while(read(fd, &de, sizeof(de)) == sizeof(de)){
+    while(read(fd, &de, sizeof(de)) == sizeof(de)){  // 循环获取文件夹中所有文件，fd描述符为T_DIR类型，则内部保存多个文件，每个文件格式为struct dirent
       if(de.inum == 0)
         continue;
-      memmove(p, de.name, DIRSIZ);
+      memmove(p, de.name, DIRSIZ);  // void *memmove(void *dest, const void *src, size_t n);
       p[DIRSIZ] = 0;
       if(stat(buf, &st) < 0){
         printf("ls: cannot stat %s\n", buf);

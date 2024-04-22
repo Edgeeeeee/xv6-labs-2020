@@ -9,7 +9,7 @@
 /*
  * the kernel's page table.
  */
-pagetable_t kernel_pagetable;
+pagetable_t kernel_pagetable;  // 指向根页表的指针
 
 extern char etext[];  // kernel.ld sets this to end of kernel code.
 
@@ -25,7 +25,7 @@ kvminit()
   memset(kernel_pagetable, 0, PGSIZE);
 
   // uart registers
-  kvmmap(UART0, UART0, PGSIZE, PTE_R | PTE_W);
+  kvmmap(UART0, UART0, PGSIZE, PTE_R | PTE_W);  // 添加一个直接映射，此例将UART0映射到UART0
 
   // virtio mmio disk interface
   kvmmap(VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
@@ -53,12 +53,13 @@ void
 kvminithart()
 {
   w_satp(MAKE_SATP(kernel_pagetable));
-  sfence_vma();
+  sfence_vma();  // 刷新TLB
 }
 
 // Return the address of the PTE in page table pagetable
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page-table pages.
+// 返回pagetable页表中虚拟地址va对应的物理地址，如果alloc = 0，则创建任何所需要的页表页。
 //
 // The risc-v Sv39 scheme has three levels of page-table
 // pages. A page-table page contains 512 64-bit PTEs.
@@ -91,6 +92,8 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
 // Look up a virtual address, return the physical address,
 // or 0 if not mapped.
 // Can only be used to look up user pages.
+// 查找虚拟地址，返回物理地址，如果返回0表示不在页表中 （实际上是walk的封装，illoc被设置为0）
+// 仅能用于用户页面
 uint64
 walkaddr(pagetable_t pagetable, uint64 va)
 {
@@ -114,6 +117,7 @@ walkaddr(pagetable_t pagetable, uint64 va)
 // add a mapping to the kernel page table.
 // only used when booting.
 // does not flush TLB or enable paging.
+// 向内核页表添加映射。仅在引导时使用。不刷新TLB或启用分页。
 void
 kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
 {
@@ -125,6 +129,7 @@ kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
 // a physical address. only needed for
 // addresses on the stack.
 // assumes va is page aligned.
+// 将 内核 虚拟地址转换为物理地址。仅对堆栈上的地址需要。假设va是页面对齐的。
 uint64
 kvmpa(uint64 va)
 {

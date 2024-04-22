@@ -181,19 +181,22 @@ w_mtvec(uint64 x)
   asm volatile("csrw mtvec, %0" : : "r" (x));
 }
 
-// use riscv's sv39 page table scheme.
+// use riscv's sv39 page table scheme.  虚拟地址共64位，仅使用低39位
 #define SATP_SV39 (8L << 60)
 
+// 右移12位表示去掉地址中的页内偏移得到页表基址
 #define MAKE_SATP(pagetable) (SATP_SV39 | (((uint64)pagetable) >> 12))
 
 // supervisor address translation and protection;
 // holds the address of the page table.
+// 将x的值写入到SATP寄存器中，这是保存根页表地址的寄存器
 static inline void 
 w_satp(uint64 x)
 {
   asm volatile("csrw satp, %0" : : "r" (x));
 }
 
+// 读SATP寄存器，返回结果。
 static inline uint64
 r_satp()
 {
@@ -311,7 +314,7 @@ r_ra()
   return x;
 }
 
-// flush the TLB.
+// 刷新TLB
 static inline void
 sfence_vma()
 {
@@ -320,17 +323,17 @@ sfence_vma()
 }
 
 
-#define PGSIZE 4096 // bytes per page
-#define PGSHIFT 12  // bits of offset within a page
+#define PGSIZE 4096 // 页面大小4096字节
+#define PGSHIFT 12  // 页面偏移，对应4096字节
 
-#define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))
-#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))
+#define PGROUNDUP(sz)  (((sz)+PGSIZE-1) & ~(PGSIZE-1))  // 对页面大小向上取整
+#define PGROUNDDOWN(a) (((a)) & ~(PGSIZE-1))  // 对页面大小向下取整
 
 #define PTE_V (1L << 0) // valid
 #define PTE_R (1L << 1)
 #define PTE_W (1L << 2)
 #define PTE_X (1L << 3)
-#define PTE_U (1L << 4) // 1 -> user can access
+#define PTE_U (1L << 4) //用户模式下可用。 1 -> user can access
 
 // shift a physical address to the right place for a PTE.
 #define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)

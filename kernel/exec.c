@@ -21,16 +21,16 @@ exec(char *path, char **argv)
   pagetable_t pagetable = 0, oldpagetable;
   struct proc *p = myproc();
 
-  begin_op();
+  begin_op();  // 主要内容是log
 
-  if((ip = namei(path)) == 0){
+  if((ip = namei(path)) == 0){  // 根据path返回inode
     end_op();
     return -1;
   }
   ilock(ip);
 
-  // Check ELF header
-  if(readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))
+  // Check ELF header， readi(struct inode *ip, int user_dst, uint64 dst, uint off, uint n)
+  if(readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))  // 从inode中读取数据，此代码从inode中读取elf
     goto bad;
   if(elf.magic != ELF_MAGIC)
     goto bad;

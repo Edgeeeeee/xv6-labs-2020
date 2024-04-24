@@ -21,6 +21,7 @@ fetchaddr(uint64 addr, uint64 *ip)
 
 // Fetch the nul-terminated string at addr from the current process.
 // Returns length of string, not including nul, or -1 for error.
+// 从当前进程中提取地址 addr 处的空终止字符串。返回字符串的长度（不包括终止符），或者出错时返回 -1。
 int
 fetchstr(uint64 addr, char *buf, int max)
 {
@@ -54,6 +55,7 @@ argraw(int n)
 }
 
 // Fetch the nth 32-bit system call argument.
+// 获取第n个32位系统调用
 int
 argint(int n, int *ip)
 {
@@ -64,6 +66,7 @@ argint(int n, int *ip)
 // Retrieve an argument as a pointer.
 // Doesn't check for legality, since
 // copyin/copyout will do that.
+// 检索参数作为指针。由于 copyin/copyout 将会执行合法性检查，因此此处不进行检查。
 int
 argaddr(int n, uint64 *ip)
 {
@@ -74,6 +77,7 @@ argaddr(int n, uint64 *ip)
 // Fetch the nth word-sized system call argument as a null-terminated string.
 // Copies into buf, at most max.
 // Returns string length if OK (including nul), -1 if error.
+// 提取第 n 个字大小的系统调用参数作为以空终止的字符串。最多复制到缓冲区 buf 中 max 个字符。如果成功返回字符串长度（包括终止符），如果出错返回 -1。
 int
 argstr(int n, char *buf, int max)
 {
@@ -104,6 +108,8 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
+extern uint64 sys_trace(void);
+extern uint64 sys_sysinfo(void);
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -127,6 +133,34 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_trace]   sys_trace,
+[SYS_sysinfo] sys_sysinfo,
+};
+
+static char *syscalls_name[] = {
+[SYS_fork]    "fork",
+[SYS_exit]    "exit",
+[SYS_wait]    "wait",
+[SYS_pipe]    "pipe",
+[SYS_read]    "read",
+[SYS_kill]    "kill",
+[SYS_exec]    "exec",
+[SYS_fstat]   "fstat",
+[SYS_chdir]   "chdir",
+[SYS_dup]     "dup",
+[SYS_getpid]  "getpid",
+[SYS_sbrk]    "sbrk",
+[SYS_sleep]   "sleep",
+[SYS_uptime]  "uptime",
+[SYS_open]    "open",
+[SYS_write]   "write",
+[SYS_mknod]   "mknod",
+[SYS_unlink]  "unlink",
+[SYS_link]    "link",
+[SYS_mkdir]   "mkdir",
+[SYS_close]   "close",
+[SYS_trace]   "trace",
+[SYS_sysinfo]   "sysinfo",
 };
 
 void
@@ -135,9 +169,12 @@ syscall(void)
   int num;
   struct proc *p = myproc();
 
-  num = p->trapframe->a7;
+  num = p->trapframe->a7;  // 系统调用编号
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    p->trapframe->a0 = syscalls[num]();
+    p->trapframe->a0 = syscalls[num]();  // 执行系统调用，将返回值存入a0
+    if ((1 << num) & p->trace_mask)
+      printf("%d: syscall %s -> %d\n", p->pid, syscalls_name[num], p->trapframe->a0);
+
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);

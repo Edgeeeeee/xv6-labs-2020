@@ -6,7 +6,9 @@
 #include "proc.h"
 #include "defs.h"
 
-struct cpu cpus[NCPU];
+// 此文件内添加系统调用
+
+struct cpu cpus[NCPU];  //
 
 struct proc proc[NPROC];
 
@@ -290,6 +292,7 @@ fork(void)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
+  np->trace_mask = p->trace_mask;
 
   pid = np->pid;
 
@@ -693,3 +696,17 @@ procdump(void)
     printf("\n");
   }
 }
+
+
+// 遍历所有进程。
+void
+procnum(uint64 *dst)
+{
+  *dst = 0;
+  struct proc *p;
+  for (p = proc; p < &proc[NPROC]; p++) {
+    if (p->state != UNUSED)
+      (*dst)++;
+  }
+}
+

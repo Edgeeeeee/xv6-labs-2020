@@ -21,7 +21,21 @@ struct run {
 struct {
   struct spinlock lock;
   struct run *freelist;
-} kmem;
+} kmem;  // 内存池
+
+// 遍历所有run节点，每个节点表示一个PGSIZE字节大小。
+void
+freebytes(uint64 *dst)
+{
+  *dst = 0;
+  struct run *p = kmem.freelist;
+  acquire(&kmem.lock);
+  while (p) {
+    *dst += PGSIZE;  // 每个节点为一个页面大小。
+    p = p->next;
+  }
+  release(&kmem.lock);
+}
 
 void
 kinit()
@@ -80,3 +94,5 @@ kalloc(void)
     memset((char*)r, 5, PGSIZE); // fill with junk
   return (void*)r;
 }
+
+

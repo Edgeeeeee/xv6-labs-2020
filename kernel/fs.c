@@ -622,6 +622,7 @@ skipelem(char *path, char *name)
 // If parent != 0, return the inode for the parent and copy the final
 // path element into name, which must have room for DIRSIZ bytes.
 // Must be called inside a transaction since it calls iput().
+// 查找并返回路径名的 inode。如果 parent != 0，则返回父目录的 inode，并将最终路径元素复制到 name 中，name 必须有 DIRSIZ 字节的空间。必须在事务内调用，因为它调用了 iput()。
 static struct inode*
 namex(char *path, int nameiparent, char *name)
 {

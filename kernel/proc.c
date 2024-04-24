@@ -127,7 +127,42 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  // 初始化进程内核页表
+  p->kpagetable = proc_kpt_init();
+  char *pa = kalloc();
+      if(pa == 0)
+        panic("kalloc");
+      uint64 va = KSTACK((int) (p - proc));
+      uvmmap(p->kpagetable, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      p->kstack = va;
+
+  if (p->kpagetable == 0) {
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
   return p;
+}
+
+
+// 类似于freewakl函数，如果是地址，就赋值为0，如果是下一级pagetable地址，递归调用。
+void
+proc_freekernelpt(pagetable_t kernelpt)
+{
+  // similar to the freewalk method
+  // there are 2^9 = 512 PTEs in a page table.
+  for(int i = 0; i < 512; i++){
+    pte_t pte = kernelpt[i];
+    if(pte & PTE_V){
+      kernelpt[i] = 0;
+      if ((pte & (PTE_R|PTE_W|PTE_X)) == 0){
+        uint64 child = PTE2PA(pte);
+        proc_freekernelpt((pagetable_t)child);
+      }
+    }
+  }
+  kfree((void*)kernelpt);  // 释放，放入内存池
 }
 
 // free a proc structure and the data hanging from it,
@@ -150,6 +185,11 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
+  uvmunmap(p->kpagetable, p->kstack, 1, 1);  // uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
+  p->kstack = 0;
+  proc_freekernelpt(p->kpagetable);
+
 }
 
 // Create a user page table for a given process,
@@ -473,7 +513,10 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+
+        proc_inithart(p->kpagetable);  // 将进程的内核页表放入SATP寄存器中
         swtch(&c->context, &p->context);
+        kvminithart();  // 恢复原状。
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
